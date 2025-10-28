@@ -1,0 +1,18 @@
+pridavanie / upravovanie / mazanie
+
+kazdy expense bude mat:
+
+nazov
+datum
+sumu
+validovat:
+
+popisy nesmu byt prazdne
+zobrazit chybovu hlasku a nedovolit userovi pridat expense
+automaticky agregovat expenses spolu podla mesiaca
+
+pre kazdy mesiac zobrazit celkove minute uspory
+
+zobrazovat celkove minute uspory
+
+ukladanie do localStorage

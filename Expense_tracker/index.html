@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense List</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(135deg, #66956a, #c1f0c1);
+    }
+
+    section#app {
+      background: #f8fff8;
+      border: 2px solid #a0e6a5;
+      border-radius: 15px;
+      padding: 40px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      width: 420px;
+    }
+
+    h1 {
+      color: #2d7a36;
+      margin-bottom: 20px;
+      font-size: 24px;
+    }
+
+    h3 {
+      color: #2d7a36;
+      text-align: left;
+    }
+
+    input {
+      width: 80%;
+      padding: 10px;
+      margin: 8px 0;
+      border: 1px solid #a7dca9;
+      border-radius: 8px;
+      outline: none;
+      font-size: 14px;
+      transition: border 0.3s, box-shadow 0.3s;
+    }
+
+    input:focus {
+      border-color: #5ecb6e;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    button {
+      background-color: #5ecb6e;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.3s;
+      margin-top: 5px;
+    }
+
+    button:hover {
+      background-color: #4bb45e;
+    }
+
+    ul {
+      list-style-type: none;
+      padding: 0;
+      margin-top: 20px;
+      text-align: left;
+    }
+
+    li {
+      background-color: #e7ffe9;
+      border: 1px solid #b6ecbb;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 8px;
+      color: #2e7a33;
+      font-weight: 500;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .left {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .date {
+      font-size: 13px;
+      color: #4a8c4e;
+    }
+
+    .delete-btn {
+      background-color: #ff6b6b;
+      border: none;
+      color: white;
+      padding: 6px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      transition: background 0.3s;
+    }
+
+    .delete-btn:hover {
+      background-color: #e85b5b;
+    }
+
+    .error-message {
+      color: #ff3333;
+      background: #ffe6e6;
+      padding: 10px;
+      border-radius: 5px;
+      margin-bottom: 10px;
+    }
+
+    .total-box {
+      background: #d4f5d9;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .total-box h3 {
+      margin: 0;
+      color: #2d7a36;
+    }
+
+    .cancel-btn {
+      background-color: #ff9800;
+      margin-left: 5px;
+    }
+
+    .cancel-btn:hover {
+      background-color: #e68900;
+    }
+
+    .edit-btn {
+      background-color: #2688ff;
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+
+    .edit-btn:hover {
+      background-color: #237deb;
+    }
+
+    .price-display {
+      font-weight: bold;
+    }
+
+    .monthly-section {
+      margin-top: 30px;
+    }
+
+    .no-expenses {
+      margin-top: 20px;
+      color: #888;
+    }
+  </style>
+</head>
+<body>
+
+    <section id="app">
+        <h1>Expense Tracker</h1>
+        
+        <!-- Error message -->
+        <div v-if="errorMessage" class="error-message">
+            {{ errorMessage }}
+        </div>
+        
+        <!-- Total expenses -->
+        <div class="total-box">
+            <h3>Total Expenses: {{ totalExpenses.toFixed(2) }} €</h3>
+        </div>
+        
+        <!-- Input form -->
+        <div>
+            <input type="text" v-model="productName" placeholder="Product name" required>
+            <input type="number" v-model="productPrice" placeholder="Price €" step="0.01" required>
+            <input type="date" v-model="productDate" required>
+            <button @click="addOrUpdateProduct" type="submit">{{ editingIndex !== null ? 'Update' : 'Add' }}</button>
+            <button v-if="editingIndex !== null" @click="cancelEdit" class="cancel-btn">Cancel</button>
+        </div>
+        
+        <!-- Monthly aggregation -->
+        <div v-for="(group, month) in expensesByMonth" :key="month" class="monthly-section">
+            <h3>{{ month }} - Total: {{ group.total.toFixed(2) }} €</h3>
+            <ul>
+                <li v-for="(product, index) in group.expenses" :key="product.id">
+                    <div class="left">
+                        <span><strong>{{ product.name }}</strong></span>
+                        <span class="date">{{ formatDate(product.date) }}</span>
+                    </div>
+                    <div class="right">
+                        <span class="price-display">{{ parseFloat(product.price).toFixed(2) }} €</span>
+                        <button @click="editProduct(product.id)" class="edit-btn">Edit</button>
+                        <button class="delete-btn" @click="deleteProduct(product.id)">Delete</button>
+                    </div>
+                </li>
+            </ul>
+        </div>
+        
+        <div v-if="products.length === 0" class="no-expenses">
+            No expenses yet. Add your first expense!
+        </div>
+    </section>
+
+
+    <script type="module">
+  import { createApp, ref, computed, watch, onMounted } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
+
+  createApp({
+    setup() {
+      const productName = ref('')
+      const productPrice = ref('')
+      const today = new Date().toISOString().split('T')[0]
+      const productDate = ref(today)
+      const products = ref([])
+      const errorMessage = ref('')
+      const editingIndex = ref(null)
+      let nextId = ref(1)
+
+      // Load from localStorage on mount
+      onMounted(() => {
+        loadFromLocalStorage()
+      })
+
+      // Watch products array and save to localStorage on changes
+      watch(products, () => {
+        saveToLocalStorage()
+      }, { deep: true })
+
+      // Computed: Total expenses
+      const totalExpenses = computed(() => {
+        return products.value.reduce((sum, product) => sum + parseFloat(product.price || 0), 0)
+      })
+
+      // Computed: Group expenses by month
+      const expensesByMonth = computed(() => {
+        const grouped = {}
+        
+        products.value.forEach(product => {
+          const date = new Date(product.date)
+          const monthYear = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+          
+          if (!grouped[monthYear]) {
+            grouped[monthYear] = {
+              expenses: [],
+              total: 0
+            }
+          }
+          
+          grouped[monthYear].expenses.push(product)
+          grouped[monthYear].total += parseFloat(product.price || 0)
+        })
+        
+        // Sort by date (newest first)
+        Object.keys(grouped).forEach(month => {
+          grouped[month].expenses.sort((a, b) => new Date(b.date) - new Date(a.date))
+        })
+        
+        return grouped
+      })
+
+      // Validate inputs
+      const validateInputs = () => {
+        errorMessage.value = ''
+        
+        if (!productName.value || productName.value.trim() === '') {
+          errorMessage.value = 'Product name cannot be empty!'
+          return false
+        }
+        
+        if (!productPrice.value || parseFloat(productPrice.value) <= 0) {
+          errorMessage.value = 'Price must be greater than 0!'
+          return false
+        }
+        
+        if (!productDate.value) {
+          errorMessage.value = 'Date cannot be empty!'
+          return false
+        }
+        
+        return true
+      }
+
+      // Add or Update product
+      const addOrUpdateProduct = () => {
+        if (!validateInputs()) {
+          return
+        }
+
+        if (editingIndex.value !== null) {
+          // Update existing product
+          const productToUpdate = products.value.find(p => p.id === editingIndex.value)
+          if (productToUpdate) {
+            productToUpdate.name = productName.value.trim()
+            productToUpdate.price = productPrice.value
+            productToUpdate.date = productDate.value
+          }
+          editingIndex.value = null
+        } else {
+          // Add new product
+          products.value.push({
+            id: nextId.value++,
+            name: productName.value.trim(),
+            price: productPrice.value,
+            date: productDate.value
+          })
+        }
+
+        // Clear inputs
+        productName.value = ''
+        productPrice.value = ''
+        productDate.value = today
+        errorMessage.value = ''
+        
+        console.log('Product saved:', products.value)
+      }
+
+      // Edit product
+      const editProduct = (id) => {
+        const product = products.value.find(p => p.id === id)
+        if (product) {
+          productName.value = product.name
+          productPrice.value = product.price
+          productDate.value = product.date
+          editingIndex.value = id
+          errorMessage.value = ''
+        }
+      }
+
+      // Cancel edit
+      const cancelEdit = () => {
+        editingIndex.value = null
+        productName.value = ''
+        productPrice.value = ''
+        productDate.value = today
+        errorMessage.value = ''
+      }
+
+      // Delete product
+      const deleteProduct = (id) => {
+        const index = products.value.findIndex(p => p.id === id)
+        if (index !== -1) {
+          products.value.splice(index, 1)
+        }
+      }
+
+      // Save to localStorage
+      const saveToLocalStorage = () => {
+        localStorage.setItem('expenses', JSON.stringify(products.value))
+        localStorage.setItem('nextId', nextId.value.toString())
+      }
+
+      // Load from localStorage
+      const loadFromLocalStorage = () => {
+        const savedExpenses = localStorage.getItem('expenses')
+        const savedNextId = localStorage.getItem('nextId')
+        
+        if (savedExpenses) {
+          products.value = JSON.parse(savedExpenses)
+        }
+        
+        if (savedNextId) {
+          nextId.value = parseInt(savedNextId)
+        }
+      }
+
+      // Format date for display
+      const formatDate = (dateStr) => {
+        const date = new Date(dateStr)
+        return date.toLocaleDateString('sk-SK')
+      }
+
+      return {
+        productName,
+        productPrice,
+        productDate,
+        products,
+        errorMessage,
+        editingIndex,
+        totalExpenses,
+        expensesByMonth,
+        addOrUpdateProduct,
+        editProduct,
+        cancelEdit,
+        deleteProduct,
+        formatDate
+      }
+    }
+  }).mount('#app')
+</script>
+    
+</body>
+</html>
