@@ -13,7 +13,7 @@ const subject = ref('Math')
 
 const subjects = ['Math', 'English', 'Science', 'History', 'Other']
 
-// Set page title
+
 useTitle('Add Note - Notes App')
 
 const handleSubmit = () => {

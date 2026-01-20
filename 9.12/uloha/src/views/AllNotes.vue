@@ -16,7 +16,6 @@ const filteredNotes = computed(() => {
   return notes.value.filter(note => note.subject === selectedSubject.value)
 })
 
-// Set dynamic page title based on number of notes
 useTitle(computed(() => 
   notes.value.length > 0 
     ? `All Notes (${notes.value.length}) - Notes App` 
